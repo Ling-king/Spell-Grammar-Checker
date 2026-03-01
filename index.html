@@ -278,7 +278,9 @@
       padding:10px;
       border-radius:10px;
       border:none;
-      font-weight:700;
+      font-weight:800;
+      color:white;
+      cursor:pointer;
     }
     .unlock{ background:#7c5cff; }
     .cancel{ background:#ef4444; }
@@ -293,6 +295,7 @@
     }
   </style>
 </head>
+
 <body>
   <div class="wrap">
     <div class="topbar">
@@ -462,10 +465,7 @@
   }
 
   function renderOverlayPlain(){
-    const t = getInputText();
-    overlayEl.textContent = t;
-    // keep corrected in sync when not using AI fix
-    if(!correctedEl.value) correctedEl.value = t;
+    overlayEl.textContent = getInputText();
   }
 
   function syncScroll(){
@@ -625,13 +625,16 @@
         ? `Detected/Used: ${data.language.name}`
         : `Selected: ${langEl.options[langEl.selectedIndex].text}`;
 
+      // IMPORTANT: reset corrected baseline to input text on every check
+      correctedEl.value = getInputText();
+
       renderIssues();
       renderOverlayWithHighlights();
 
       if(lastMatches.length === 0){
         setStatus('ok', 'No issues found.');
       } else {
-        setStatus('bad', `${lastMatches.length} issue(s) found. Click an issue to fix it.`);
+        setStatus('bad', `${lastMatches.length} issue(s) found. Click an issue to fix it (goes to corrected box).`);
       }
 
     } catch(err){
@@ -732,47 +735,52 @@
   }
 
   // -----------------------------
-  // APPLY FIXES (SMART)
+  // APPLY FIXES (ONLY TO CORRECTED TEXT)
   // -----------------------------
   function applySingle(idx){
     const m = lastMatches[idx];
     if(!m || !m.replacements || m.replacements.length === 0) return;
 
-    const original = getInputText();
+    // Work on corrected text (if empty: start from input)
+    let baseText = (correctedEl.value && correctedEl.value.length) ? correctedEl.value : getInputText();
+
     const start = m.offset;
     const end = m.offset + m.length;
 
-    const wrong = original.slice(start, end);
-    const best = chooseBestSuggestion(wrong, m.replacements);
+    if(start < 0 || end > baseText.length || end < start) return;
 
+    const wrong = baseText.slice(start, end);
+    const best = chooseBestSuggestion(wrong, m.replacements);
     if(!best) return;
 
-    const updated = original.slice(0, start) + best + original.slice(end);
-    setInputText(updated);
-    checkText(false);
+    correctedEl.value = baseText.slice(0, start) + best + baseText.slice(end);
+    setStatus('ok', 'Applied fix to corrected text.');
   }
 
   async function applyAll(){
     if(lastMatches.length === 0) return;
 
-    let t = getInputText();
-    const matchesSorted = [...lastMatches].sort((a,b) => (b.offset - a.offset));
+    // Work on corrected text (if empty: start from input)
+    let t = (correctedEl.value && correctedEl.value.length) ? correctedEl.value : getInputText();
 
+    const matchesSorted = [...lastMatches].sort((a,b) => (b.offset - a.offset));
     for(const m of matchesSorted){
       if(!m.replacements || m.replacements.length === 0) continue;
 
       const start = m.offset;
       const end = m.offset + m.length;
+
+      if(start < 0 || end > t.length || end < start) continue;
+
       const wrong = t.slice(start, end);
       const best = chooseBestSuggestion(wrong, m.replacements);
-
       if(!best) continue;
 
       t = t.slice(0, start) + best + t.slice(end);
     }
 
-    setInputText(t);
-    await checkText(true);
+    correctedEl.value = t;
+    setStatus('ok', 'Applied all fixes to corrected text.');
   }
 
   // -----------------------------
@@ -822,22 +830,22 @@
       try { data = JSON.parse(rawText); } catch { data = { correctedText: rawText }; }
 
       if(!res.ok){
-        // Show helpful error
-        const msg = data?.error || "AI Fix failed. Check your code and make sure OpenAI key is set in Vercel.";
+        const msg = data?.error || "AI Fix failed. Check your code and your OpenAI settings in Vercel.";
         throw new Error(msg);
       }
 
-      // ✅ Always extract corrected text (even if backend accidentally returns JSON as string)
+      // Extract corrected string
       let out = data.correctedText || data.outputText || data.text || "";
       if (typeof out !== "string") out = String(out);
 
+      // If it returned JSON string, unwrap it
       try {
         const maybe = JSON.parse(out);
         if (maybe && typeof maybe.correctedText === "string") out = maybe.correctedText;
       } catch {}
 
       correctedEl.value = out;
-      setStatus('ok', 'AI fix done. (See left box)');
+      setStatus('ok', 'AI fix done. (See corrected box)');
 
     } catch(e){
       console.error(e);
@@ -851,7 +859,6 @@
   async function aiFix(){
     const saved = getSavedCode();
     if(saved){
-      // Try directly
       await runAiFixWithCode(saved);
       return;
     }
@@ -869,13 +876,8 @@
     await runAiFixWithCode(code);
   });
 
-  aiCodeCancel.addEventListener("click", () => {
-    closeAiModal();
-  });
-
-  aiModal.addEventListener("click", (e) => {
-    if(e.target === aiModal) closeAiModal();
-  });
+  aiCodeCancel.addEventListener("click", () => closeAiModal());
+  aiModal.addEventListener("click", (e) => { if(e.target === aiModal) closeAiModal(); });
 
   aiCodeInput.addEventListener("keydown", (e) => {
     if(e.key === "Enter") aiCodeSubmit.click();
@@ -956,7 +958,6 @@
   aiFixBtn.addEventListener("click", aiFix);
 
   clearBtn.addEventListener("click", () => {
-    // Full reset
     editorEl.innerText = "";
     overlayEl.textContent = "";
     correctedEl.value = "";
