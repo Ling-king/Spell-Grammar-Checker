@@ -1,0 +1,879 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1"/>
+  <title>Spell & Grammar Checker</title>
+  <link rel="icon" type="image/png" href="logo.png">
+  <style>
+    :root{
+      --bg:#0b1020;
+      --muted:#a9b3d1;
+      --text:#eef2ff;
+      --accent:#7c5cff;
+      --accent2:#22c55e;
+      --danger:#ef4444;
+      --warn:#f59e0b;
+      --border:rgba(255,255,255,.08);
+      --shadow: 0 20px 60px rgba(0,0,0,.35);
+      --radius:18px;
+      --area-bg: rgba(0,0,0,.18);
+    }
+    *{box-sizing:border-box}
+    body{
+      margin:0;
+      font-family: ui-sans-serif, system-ui, -apple-system, Segoe UI, Roboto, Arial, "Noto Sans", "Helvetica Neue";
+      background: radial-gradient(1200px 600px at 10% 0%, rgba(124,92,255,.35), transparent 60%),
+                  radial-gradient(900px 500px at 90% 10%, rgba(34,197,94,.25), transparent 55%),
+                  var(--bg);
+      color:var(--text);
+      min-height:100vh;
+      padding:28px;
+    }
+    .wrap{max-width:1100px;margin:0 auto}
+    .topbar{display:flex; gap:14px; align-items:center; justify-content:space-between; margin-bottom:18px;}
+    .brand{display:flex; gap:12px; align-items:center;}
+    .logo{
+      width:42px;height:42px;border-radius:14px;
+      background: linear-gradient(135deg, var(--accent), #38bdf8);
+      box-shadow: var(--shadow);
+    }
+	.site-logo{
+  width:42px;
+  height:42px;
+  border-radius:14px;
+  box-shadow: var(--shadow);
+  object-fit: cover;
+}
+    h1{font-size:18px;margin:0}
+    .sub{color:var(--muted);font-size:13px;margin-top:2px}
+
+    .card{
+      background: linear-gradient(180deg, rgba(255,255,255,.06), rgba(255,255,255,.03));
+      border:1px solid var(--border);
+      border-radius: var(--radius);
+      box-shadow: var(--shadow);
+      overflow:hidden;
+    }
+    .controls{
+      display:flex; flex-wrap:wrap; gap:10px; align-items:center;
+      padding:14px;
+      border-bottom:1px solid var(--border);
+      background: rgba(0,0,0,.15);
+      position: sticky;
+      top: 0;
+      z-index: 5;
+      backdrop-filter: blur(8px);
+    }
+    select, button{
+      border-radius: 12px;
+      border:1px solid var(--border);
+      background: rgba(255,255,255,.06);
+      color:var(--text);
+      padding:10px 12px;
+      font-size:14px;
+      outline:none;
+    }
+    button{
+      cursor:pointer;
+      transition: transform .08s ease, background .15s ease;
+      user-select:none;
+    }
+    button:hover{ background: rgba(255,255,255,.10); }
+    button:active{ transform: scale(.98); }
+    button:disabled{ opacity:.5; cursor:not-allowed; }
+
+    .primary{ background: rgba(124,92,255,.22); border-color: rgba(124,92,255,.45); }
+    .primary:hover{ background: rgba(124,92,255,.28); }
+    .good{ background: rgba(34,197,94,.20); border-color: rgba(34,197,94,.45); }
+    .danger{ background: rgba(239,68,68,.18); border-color: rgba(239,68,68,.45); }
+    .neutral{ background: rgba(255,255,255,.08); }
+    .export{ background: rgba(245,158,11,.18); border-color: rgba(245,158,11,.45); }
+    .export:hover{ background: rgba(245,158,11,.24); }
+    .ai{ background: rgba(56,189,248,.16); border-color: rgba(56,189,248,.42); }
+    .ai:hover{ background: rgba(56,189,248,.22); }
+
+    .mega{
+      padding: 12px 16px;
+      font-size: 15px;
+      font-weight: 800;
+      border-color: rgba(124,92,255,.75);
+      background: rgba(124,92,255,.35);
+      box-shadow: 0 10px 30px rgba(124,92,255,.25);
+    }
+    .mega:hover{ background: rgba(124,92,255,.45); }
+    .hint{ color: var(--muted); font-size: 12px; }
+
+    .status{
+      margin-left:auto;
+      color:var(--muted);
+      font-size:13px;
+      display:flex;
+      gap:10px;
+      align-items:center;
+    }
+    .dot{
+      width:9px;height:9px;border-radius:99px;
+      background: rgba(255,255,255,.25);
+    }
+    .dot.ok{ background: var(--accent2); }
+    .dot.bad{ background: var(--danger); }
+    .dot.busy{ background: var(--warn); }
+
+    .grid{ display:grid; grid-template-columns: 1fr 1fr; gap:0; }
+    .pane{ padding:14px; border-right:1px solid var(--border); }
+    .pane:last-child{ border-right:none; }
+    .label{
+      display:flex; align-items:center; justify-content:space-between;
+      margin-bottom:10px;
+      color:var(--muted);
+      font-size:13px;
+      gap: 10px;
+    }
+
+    textarea{
+      width:100%;
+      height:320px;
+      resize: vertical;
+      border-radius: 14px;
+      border:1px solid var(--border);
+      background: var(--area-bg);
+      color:var(--text);
+      padding:12px;
+      font-size:14px;
+      line-height:1.45;
+      outline:none;
+      white-space: pre-wrap;
+    }
+    textarea[readonly]{ opacity:.95; }
+
+    .hiWrap{
+      position:relative;
+      width:100%;
+      height:320px;
+    }
+    .hiOverlay, .hiEditor{
+      position:absolute;
+      inset:0;
+      border-radius: 14px;
+      border:1px solid var(--border);
+      background: var(--area-bg);
+      padding:12px;
+      font-size:14px;
+      line-height:1.45;
+      overflow:auto;
+      white-space: pre-wrap;
+      word-wrap: break-word;
+    }
+    .hiOverlay{
+      color:var(--text);
+      pointer-events:none;
+    }
+    .hiOverlay mark{
+      background: rgba(239,68,68,.22);
+      outline: 1px solid rgba(239,68,68,.35);
+      border-radius: 6px;
+      padding: 0 2px;
+    }
+    .hiOverlay .soft{
+      background: rgba(245,158,11,.18);
+      outline: 1px solid rgba(245,158,11,.28);
+    }
+    .hiEditor{
+      color: transparent;
+      caret-color: var(--text);
+      background: transparent;
+      border-color: transparent;
+      outline: none;
+    }
+    .hiEditor:focus{
+      border-color: transparent;
+      box-shadow: 0 0 0 2px rgba(124,92,255,.18) inset;
+    }
+
+    .bottom{
+      display:grid;
+      grid-template-columns: 1.4fr .6fr;
+      gap:14px;
+      padding:14px;
+      border-top:1px solid var(--border);
+      background: rgba(0,0,0,.12);
+    }
+    .issues{
+      border-radius: 14px;
+      border:1px solid var(--border);
+      background: rgba(0,0,0,.18);
+      padding:12px;
+      max-height:240px;
+      overflow:auto;
+    }
+    .issue{
+      display:grid;
+      grid-template-columns: 1fr auto;
+      gap:10px;
+      padding:10px;
+      border-bottom:1px solid rgba(255,255,255,.06);
+      cursor: pointer;
+      border-radius: 12px;
+      transition: background .15s ease, transform .05s ease;
+    }
+    .issue:hover{ background: rgba(255,255,255,.06); }
+    .issue:active{ transform: scale(.995); }
+    .issue:last-child{border-bottom:none}
+    .issue b{color:#fff}
+    .meta{color:var(--muted); font-size:12px; margin-top:4px}
+    .pill{
+      display:inline-block;
+      padding:4px 10px;
+      border-radius: 999px;
+      border:1px solid var(--border);
+      color:var(--muted);
+      font-size:12px;
+      margin-left:8px;
+    }
+    .small{font-size:12px;color:var(--muted);line-height:1.45;}
+    .rightcol{
+      border-radius: 14px;
+      border:1px solid var(--border);
+      background: rgba(0,0,0,.18);
+      padding:12px;
+      display:flex;
+      flex-direction:column;
+      gap:10px;
+    }
+    .note{
+      padding:10px;
+      border:1px dashed rgba(255,255,255,.18);
+      border-radius: 14px;
+      color:var(--muted);
+      font-size:12px;
+    }
+    .row{display:flex; gap:10px; flex-wrap:wrap}
+
+    @media (max-width: 900px){
+      .grid{ grid-template-columns: 1fr; }
+      .pane{ border-right:none; border-bottom:1px solid var(--border); }
+      .pane:last-child{ border-bottom:none; }
+      .bottom{ grid-template-columns: 1fr; }
+      .status{ margin-left:0; }
+      .label{ flex-wrap: wrap; }
+    }
+  </style>
+</head>
+<body>
+  <div class="wrap">
+    <div class="topbar">
+      <div class="brand">
+        <img src="logo.png" class="site-logo" alt="Spell & Grammar Checker logo">
+        <div>
+          <h1>
+  Spell & Grammar Checker
+  <span style="font-size:12px;background:#7c5cff;padding:4px 8px;border-radius:999px;margin-left:8px;">
+    AI
+  </span>
+</h1>
+          <div class="sub">Auto-check • Highlights • Export PDF/DOCX • AI Fix (backend)</div>
+        </div>
+      </div>
+    </div>
+
+    <div class="card">
+      <div class="controls">
+        <select id="lang" title="Choose language or auto-detect">
+          <option value="auto">Language: Auto-detect</option>
+          <option value="en-US">English (US)</option>
+          <option value="en-GB">English (UK)</option>
+          <option value="sv">Swedish</option>
+          <option value="de">German</option>
+          <option value="fr">French</option>
+          <option value="es">Spanish</option>
+          <option value="it">Italian</option>
+          <option value="nl">Dutch</option>
+          <option value="pl">Polish</option>
+          <option value="pt">Portuguese</option>
+          <option value="ru">Russian</option>
+          <option value="uk">Ukrainian</option>
+          <option value="tr">Turkish</option>
+        </select>
+
+        <button class="primary mega" id="checkBtn">✅ Check text</button>
+        <span class="hint">Auto-check runs while typing — this forces an instant re-check.</span>
+
+        <button class="good" id="applyAllBtn" title="Apply best suggestion for each issue">Apply all</button>
+
+        <button class="ai" id="aiFixBtn" title="AI proofread using your backend">✨ AI Fix</button>
+
+        <button id="swapBtn" class="neutral" title="Move corrected text back to input">Use corrected as input</button>
+        <button id="clearBtn" class="danger">Clear</button>
+
+        <div class="status" id="status">
+          <span class="dot" id="dot"></span>
+          <span id="statusText">Ready.</span>
+        </div>
+      </div>
+
+      <div class="grid">
+        <div class="pane">
+          <div class="label">
+            <span>Corrected text (read-only)</span>
+            <div class="row">
+              <button id="copyCorrectedBtn">Copy</button>
+              <button class="export" id="exportPdfBtn">Export PDF</button>
+              <button class="export" id="exportDocxBtn">Export Word</button>
+            </div>
+          </div>
+          <textarea id="corrected" readonly placeholder="Corrected text will appear here..."></textarea>
+        </div>
+
+        <div class="pane">
+          <div class="label">
+            <span>Input text (highlighted)</span>
+            <button id="copyInputBtn">Copy</button>
+          </div>
+
+          <div class="hiWrap">
+            <div class="hiOverlay" id="overlay" aria-hidden="true"></div>
+            <div class="hiEditor" id="editor" contenteditable="true" spellcheck="false" aria-label="Input text editor"></div>
+          </div>
+        </div>
+      </div>
+
+      <div class="bottom">
+        <div class="issues" id="issues">
+          <div class="small">Issues will appear here. Click an issue to apply the best fix (smart selection).</div>
+        </div>
+
+        <div class="rightcol">
+          <div class="note">
+            <b>LanguageTool</b> is used for highlights + quick fixes.
+            <br/><br/>
+            <b>AI Fix</b> uses your local backend: <code>http://localhost:8787</code>
+            <br/><br/>
+            ⚠️ Keep your PowerShell server running (npm start).
+          </div>
+          <div class="small" id="info"></div>
+          <div class="small" id="autoInfo">Auto-check: ON</div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- PDF + DOCX export libraries (CDN) -->
+  <script src="https://cdn.jsdelivr.net/npm/jspdf@2.5.1/dist/jspdf.umd.min.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/docx@8.5.0/build/index.umd.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/file-saver@2.0.5/dist/FileSaver.min.js"></script>
+
+<script>
+  const overlayEl = document.getElementById('overlay');
+  const editorEl = document.getElementById('editor');
+  const correctedEl = document.getElementById('corrected');
+  const issuesEl = document.getElementById('issues');
+  const langEl = document.getElementById('lang');
+
+  const statusText = document.getElementById('statusText');
+  const dot = document.getElementById('dot');
+
+  const checkBtn = document.getElementById('checkBtn');
+  const applyAllBtn = document.getElementById('applyAllBtn');
+  const aiFixBtn = document.getElementById('aiFixBtn');
+  const clearBtn = document.getElementById('clearBtn');
+  const swapBtn = document.getElementById('swapBtn');
+
+  const copyInputBtn = document.getElementById('copyInputBtn');
+  const copyCorrectedBtn = document.getElementById('copyCorrectedBtn');
+
+  const exportPdfBtn = document.getElementById('exportPdfBtn');
+  const exportDocxBtn = document.getElementById('exportDocxBtn');
+
+  const infoEl = document.getElementById('info');
+
+  // Your AI backend URL:
+  const AI_BACKEND_URL = "http://localhost:8787/api/ai-correct";
+
+  let lastMatches = [];
+  let autoTimer = null;
+  let isChecking = false;
+
+  function setStatus(type, text){
+    statusText.textContent = text;
+    dot.className = 'dot' + (type ? ' ' + type : '');
+  }
+
+  function escapeHtml(s){
+    return s.replace(/[&<>"']/g, m => ({
+      '&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#039;'
+    }[m]));
+  }
+
+  function getInputText(){
+    return editorEl.innerText.replace(/\u00A0/g, '');
+  }
+
+  function setInputText(t){
+    editorEl.innerText = t || "";
+    renderOverlayPlain();
+  }
+
+  function renderOverlayPlain(){
+    const t = getInputText();
+    overlayEl.textContent = t;
+    correctedEl.value = t;
+  }
+
+  function syncScroll(){
+    overlayEl.scrollTop = editorEl.scrollTop;
+    overlayEl.scrollLeft = editorEl.scrollLeft;
+  }
+  editorEl.addEventListener('scroll', syncScroll);
+
+  function scheduleAutoCheck(){
+    if(autoTimer) clearTimeout(autoTimer);
+    autoTimer = setTimeout(() => checkText(false), 850);
+  }
+
+  editorEl.addEventListener('input', () => {
+    renderOverlayPlain();
+    setStatus('', 'Typing… auto-check soon.');
+    scheduleAutoCheck();
+  });
+
+  langEl.addEventListener('change', () => {
+    setStatus('', 'Language changed… auto-check soon.');
+    scheduleAutoCheck();
+  });
+
+  // -----------------------------
+  // SMART SUGGESTION ENGINE
+  // -----------------------------
+  function normalizeLetters(s){
+    return (s || "")
+      .toLowerCase()
+      .normalize("NFKD")
+      .replace(/[\u0300-\u036f]/g, "");
+  }
+
+  function levenshtein(a, b){
+    a = a ?? ""; b = b ?? "";
+    const n = a.length, m = b.length;
+    if (n === 0) return m;
+    if (m === 0) return n;
+
+    const dp = new Array(m + 1);
+    for (let j = 0; j <= m; j++) dp[j] = j;
+
+    for (let i = 1; i <= n; i++){
+      let prev = dp[0];
+      dp[0] = i;
+      for (let j = 1; j <= m; j++){
+        const tmp = dp[j];
+        const cost = a[i-1] === b[j-1] ? 0 : 1;
+        dp[j] = Math.min(
+          dp[j] + 1,
+          dp[j-1] + 1,
+          prev + cost
+        );
+        prev = tmp;
+      }
+    }
+    return dp[m];
+  }
+
+  function isWeirdSuggestion(s){
+    return /[^a-zA-Z\u00C0-\u024F\u1E00-\u1EFF\u00C4\u00D6\u00DC\u00E4\u00F6\u00FC\u00E5\u00C5\u00F8\u00D8\u00DF\u0153\u00E6\u00C6\u0131\u015F\u011F\u00E7\u00C7\u00F1\u00D1\s\-']/u.test(s);
+  }
+
+  function scoreSuggestion(wrong, suggestion){
+    if (!suggestion) return Number.POSITIVE_INFINITY;
+
+    const w = (wrong ?? "").trim();
+    const s = (suggestion ?? "").trim();
+
+    if (!w || !s) return Number.POSITIVE_INFINITY;
+    if (isWeirdSuggestion(s)) return 1e9;
+
+    const distRaw = levenshtein(w.toLowerCase(), s.toLowerCase());
+    const distFold = levenshtein(normalizeLetters(w), normalizeLetters(s));
+
+    let score = distRaw * 1.0 + distFold * 0.7;
+
+    const wFirst = w[0]?.toLowerCase() ?? "";
+    const sFirst = s[0]?.toLowerCase() ?? "";
+    if (wFirst && sFirst && wFirst !== sFirst) score += 2.25;
+
+    score += Math.abs(w.length - s.length) * 0.35;
+
+    if (normalizeLetters(w) === normalizeLetters(s)) score -= 0.9;
+    if (w.length <= 3 && wFirst && sFirst && wFirst !== sFirst) score += 1.2;
+
+    return score;
+  }
+
+  function chooseBestSuggestion(wrong, replacements){
+    if (!replacements || replacements.length === 0) return null;
+
+    let best = null;
+    let bestScore = Number.POSITIVE_INFINITY;
+
+    for (const r of replacements){
+      const cand = r?.value;
+      const sc = scoreSuggestion(wrong, cand);
+      if (sc < bestScore){
+        bestScore = sc;
+        best = cand;
+      }
+    }
+    return best || replacements[0]?.value || null;
+  }
+
+  // -----------------------------
+  // LanguageTool check
+  // -----------------------------
+  async function checkText(force){
+    if(isChecking) return;
+
+    const text = getInputText().trim();
+    if(!text){
+      lastMatches = [];
+      issuesEl.innerHTML = `<div class="small">Paste or type some text first.</div>`;
+      infoEl.textContent = "";
+      setStatus('', 'Ready.');
+      renderOverlayPlain();
+      applyAllBtn.disabled = true;
+      return;
+    }
+
+    isChecking = true;
+    setStatus('busy', force ? 'Checking…' : 'Auto-checking…');
+    issuesEl.innerHTML = `<div class="small">${force ? 'Checking…' : 'Auto-checking…'}</div>`;
+    lastMatches = [];
+
+    try{
+      const url = "https://api.languagetool.org/v2/check";
+      const form = new URLSearchParams();
+      form.append("text", text);
+
+      const lang = langEl.value;
+      form.append("language", lang === "auto" ? "auto" : lang);
+
+      // avoid 400
+      if (lang === "auto") {
+        form.append("preferredLanguages", "sv,en,de,fr,es,it,nl,pl,pt,ru,uk,tr");
+        form.append("preferredVariants", "en-US,en-GB,de-DE,de-AT");
+      }
+
+      form.append("enabledOnly", "false");
+
+      const res = await fetch(url, {
+        method: "POST",
+        headers: {"Content-Type":"application/x-www-form-urlencoded"},
+        body: form.toString()
+      });
+
+      if(!res.ok){
+        const bodyText = await res.text().catch(()=> "");
+        throw new Error(`LanguageTool Request Failed: ${res.status}${bodyText ? " — " + bodyText : ""}`);
+      }
+
+      const data = await res.json();
+      lastMatches = (data.matches || []);
+
+      infoEl.textContent = (data.language && data.language.name)
+        ? `Detected/Used: ${data.language.name}`
+        : `Selected: ${langEl.options[langEl.selectedIndex].text}`;
+
+      correctedEl.value = getInputText();
+
+      renderIssues();
+      renderOverlayWithHighlights();
+
+      if(lastMatches.length === 0){
+        setStatus('ok', 'No issues found.');
+      } else {
+        setStatus('bad', `${lastMatches.length} issue(s) found. Click an issue to fix it.`);
+      }
+
+    } catch(err){
+      issuesEl.innerHTML = `<div class="small">Error: ${escapeHtml(String(err))}</div>`;
+      setStatus('bad', 'Error.');
+      renderOverlayPlain();
+      applyAllBtn.disabled = true;
+    } finally {
+      isChecking = false;
+    }
+  }
+
+  function renderIssues(){
+    if(lastMatches.length === 0){
+      issuesEl.innerHTML = `<div class="small"><b>No issues found.</b> Your text looks good.</div>`;
+      applyAllBtn.disabled = true;
+      return;
+    }
+    applyAllBtn.disabled = false;
+
+    issuesEl.innerHTML = "";
+    const fullText = getInputText();
+
+    lastMatches.forEach((m, idx) => {
+      const context = m.context || {};
+      const offset = context.offset ?? 0;
+      const length = context.length ?? 0;
+      const ctxText = context.text ?? "";
+      const before = ctxText.slice(0, offset);
+      const wrong = ctxText.slice(offset, offset + length);
+      const after  = ctxText.slice(offset + length);
+
+      const wrongInFull = fullText.slice(m.offset, m.offset + m.length);
+      const bestFix = chooseBestSuggestion(wrongInFull, m.replacements || []);
+
+      const el = document.createElement("div");
+      el.className = "issue";
+      el.dataset.idx = String(idx);
+      el.innerHTML = `
+        <div>
+          <div>
+            <b>${escapeHtml(m.message || "Issue")}</b>
+            <span class="pill">${escapeHtml(m.rule?.issueType || "unknown")}</span>
+          </div>
+          <div class="meta">
+            …${escapeHtml(before)}<span style="color:var(--danger);font-weight:700;">${escapeHtml(wrong)}</span>${escapeHtml(after)}…
+          </div>
+          <div class="meta">
+            Best fix: <b>${escapeHtml(bestFix || "(no suggestion)")}</b>
+          </div>
+        </div>
+        <div>
+          <span class="pill">${bestFix ? "Click to apply" : "No fix"}</span>
+        </div>
+      `;
+      issuesEl.appendChild(el);
+    });
+  }
+
+  function renderOverlayWithHighlights(){
+    const text = getInputText();
+
+    if(!lastMatches.length){
+      overlayEl.textContent = text;
+      return;
+    }
+
+    const ranges = lastMatches
+      .map((m) => ({
+        start: m.offset,
+        end: m.offset + m.length,
+        type: m.rule?.issueType || "unknown"
+      }))
+      .filter(r => r.start >= 0 && r.end >= r.start && r.end <= text.length)
+      .sort((a,b) => a.start - b.start || a.end - b.end);
+
+    const cleaned = [];
+    let lastEnd = -1;
+    for(const r of ranges){
+      if(r.start < lastEnd) continue;
+      cleaned.push(r);
+      lastEnd = r.end;
+    }
+
+    let out = "";
+    let cursor = 0;
+
+    for(const r of cleaned){
+      out += escapeHtml(text.slice(cursor, r.start));
+      const chunk = escapeHtml(text.slice(r.start, r.end));
+      const isSoft = (r.type === "style" || r.type === "inconsistency");
+      out += `<mark class="${isSoft ? "soft" : ""}">${chunk}</mark>`;
+      cursor = r.end;
+    }
+
+    out += escapeHtml(text.slice(cursor));
+    overlayEl.innerHTML = out.replace(/\n/g, "<br>");
+  }
+
+  // -----------------------------
+  // APPLY FIXES (SMART)
+  // -----------------------------
+  function applySingle(idx){
+    const m = lastMatches[idx];
+    if(!m || !m.replacements || m.replacements.length === 0) return;
+
+    const original = getInputText();
+    const start = m.offset;
+    const end = m.offset + m.length;
+
+    const wrong = original.slice(start, end);
+    const best = chooseBestSuggestion(wrong, m.replacements);
+
+    if(!best) return;
+
+    const updated = original.slice(0, start) + best + original.slice(end);
+    setInputText(updated);
+    checkText(false);
+  }
+
+  async function applyAll(){
+    if(lastMatches.length === 0) return;
+
+    let t = getInputText();
+    const matchesSorted = [...lastMatches].sort((a,b) => (b.offset - a.offset));
+
+    for(const m of matchesSorted){
+      if(!m.replacements || m.replacements.length === 0) continue;
+
+      const start = m.offset;
+      const end = m.offset + m.length;
+      const wrong = t.slice(start, end);
+      const best = chooseBestSuggestion(wrong, m.replacements);
+
+      if(!best) continue;
+
+      t = t.slice(0, start) + best + t.slice(end);
+    }
+
+    setInputText(t);
+    await checkText(true);
+  }
+
+  // -----------------------------
+  // AI FIX (backend)
+  // -----------------------------
+  async function aiFix(){
+    const text = getInputText().trim();
+    if(!text){
+      alert("Write some text first.");
+      return;
+    }
+
+    aiFixBtn.disabled = true;
+    setStatus('busy', 'AI is correcting…');
+
+    try{
+      const languageHint = (langEl.value && langEl.value !== "auto") ? langEl.value : "auto";
+
+      const res = await fetch(AI_BACKEND_URL, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ text, languageHint })
+      });
+
+      if(!res.ok){
+        const t = await res.text().catch(()=> "");
+        throw new Error(t || `AI backend error: ${res.status}`);
+      }
+
+      const data = await res.json();
+
+      // Put AI output in left box:
+      correctedEl.value = data.correctedText || "";
+
+      setStatus('ok', 'AI fix done. (See left box)');
+    } catch(e){
+      console.error(e);
+      setStatus('bad', 'AI error.');
+      alert("AI error: " + String(e));
+    } finally {
+      aiFixBtn.disabled = false;
+    }
+  }
+
+  // -----------------------------
+  // Copy / Export
+  // -----------------------------
+  async function copyText(text){
+    try{
+      await navigator.clipboard.writeText(text || "");
+      setStatus('ok', 'Copied!');
+      setTimeout(()=>setStatus('', 'Ready.'), 900);
+    }catch{
+      alert("Copy failed. Try selecting text and pressing Ctrl+C.");
+    }
+  }
+
+  // Export PDF (corrected)
+  exportPdfBtn.addEventListener("click", async () => {
+    const t = (correctedEl.value || "").trim();
+    if(!t){ alert("Nothing to export."); return; }
+
+    const { jsPDF } = window.jspdf;
+    const doc = new jsPDF({ unit: "pt", format: "a4" });
+
+    const margin = 44;
+    const pageWidth = doc.internal.pageSize.getWidth() - margin*2;
+
+    doc.setFont("Helvetica", "normal");
+    doc.setFontSize(11);
+
+    const lines = doc.splitTextToSize(t, pageWidth);
+    let y = margin;
+
+    for(const line of lines){
+      if (y > doc.internal.pageSize.getHeight() - margin){
+        doc.addPage();
+        y = margin;
+      }
+      doc.text(line, margin, y);
+      y += 16;
+    }
+
+    doc.save("corrected-text.pdf");
+  });
+
+  // Export DOCX (corrected)
+  exportDocxBtn.addEventListener("click", async () => {
+    const t = (correctedEl.value || "").trim();
+    if(!t){ alert("Nothing to export."); return; }
+
+    const { Document, Packer, Paragraph, TextRun } = window.docx;
+
+    const paragraphs = t.split(/\n/).map(line =>
+      new Paragraph({ children: [ new TextRun(line) ] })
+    );
+
+    const doc = new Document({
+      sections: [{ properties: {}, children: paragraphs }]
+    });
+
+    const blob = await Packer.toBlob(doc);
+    saveAs(blob, "corrected-text.docx");
+  });
+
+  // -----------------------------
+  // Event listeners
+  // -----------------------------
+  issuesEl.addEventListener("click", (e) => {
+    const row = e.target.closest(".issue");
+    if(!row) return;
+    const idx = Number(row.dataset.idx);
+    applySingle(idx);
+  });
+
+  checkBtn.addEventListener("click", () => checkText(true));
+  applyAllBtn.addEventListener("click", applyAll);
+  aiFixBtn.addEventListener("click", aiFix);
+
+  clearBtn.addEventListener("click", () => {
+    setInputText("");
+    correctedEl.value = "";
+    lastMatches = [];
+    issuesEl.innerHTML = `<div class="small">Issues will appear here. Click an issue to apply the best fix (smart selection).</div>`;
+    infoEl.textContent = "";
+    applyAllBtn.disabled = true;
+    setStatus('', 'Ready.');
+  });
+
+  swapBtn.addEventListener("click", () => {
+    const t = correctedEl.value || "";
+    if(!t.trim()) return;
+    setInputText(t);
+    checkText(true);
+  });
+
+  copyInputBtn.addEventListener("click", () => copyText(getInputText()));
+  copyCorrectedBtn.addEventListener("click", () => copyText(correctedEl.value));
+
+  // Init
+  applyAllBtn.disabled = true;
+  setInputText("");
+  setStatus('', 'Ready.');
+</script>
+</body>
+</html>
