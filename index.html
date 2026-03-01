@@ -347,7 +347,7 @@
           <div class="note">
             <b>LanguageTool</b> is used for highlights + quick fixes.
             <br/><br/>
-            <b>AI Fix</b> uses your local backend: <code>http://localhost:8787</code>
+            <b>AI Fix</b> uses secure backend: <code>/api/ai-correct</code>
             <br/><br/>
             ⚠️ Keep your PowerShell server running (npm start).
           </div>
@@ -388,7 +388,7 @@
   const infoEl = document.getElementById('info');
 
   // Your AI backend URL:
-  const AI_BACKEND_URL = "http://localhost:8787/api/ai-correct";
+  const AI_BACKEND_URL = "/api/ai-correct";
 
   let lastMatches = [];
   let autoTimer = null;
@@ -848,7 +848,75 @@
 
   checkBtn.addEventListener("click", () => checkText(true));
   applyAllBtn.addEventListener("click", applyAll);
-  aiFixBtn.addEventListener("click", aiFix);
+  const aiModal = document.getElementById("aiModal");
+const aiCodeInput = document.getElementById("aiCodeInput");
+const aiCodeSubmit = document.getElementById("aiCodeSubmit");
+const aiCodeCancel = document.getElementById("aiCodeCancel");
+
+let aiUnlocked = false;
+
+aiFixBtn.addEventListener("click", () => {
+  if(aiUnlocked){
+    aiFix();
+  } else {
+    aiModal.style.display = "flex";
+    aiCodeInput.value = "";
+    aiCodeInput.focus();
+  }
+});
+
+aiCodeSubmit.addEventListener("click", () => {
+  const code = aiCodeInput.value.trim();
+  
+  if(!code){
+    alert("Enter access code.");
+    return;
+  }
+
+  aiUnlocked = true;
+  aiModal.style.display = "none";
+  aiFixWithCode(code);
+});
+
+aiCodeCancel.addEventListener("click", () => {
+  aiModal.style.display = "none";
+});
+
+async function aiFixWithCode(code){
+  const text = getInputText().trim();
+  if(!text){
+    alert("Write some text first.");
+    return;
+  }
+
+  aiFixBtn.disabled = true;
+  setStatus('busy', 'AI is correcting…');
+
+  try{
+    const languageHint = (langEl.value && langEl.value !== "auto") ? langEl.value : "auto";
+
+    const res = await fetch("/api/ai-correct", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ text, languageHint, code })
+    });
+
+    if(!res.ok){
+      const t = await res.text().catch(()=> "");
+      throw new Error(t || `AI backend error: ${res.status}`);
+    }
+
+    const data = await res.json();
+    correctedEl.value = data.correctedText || "";
+    setStatus('ok', 'AI fix done.');
+  } catch(e){
+    console.error(e);
+    setStatus('bad', 'Invalid code or AI error.');
+    alert("Access denied or AI error.");
+  } finally {
+    aiFixBtn.disabled = false;
+  }
+}
 
   clearBtn.addEventListener("click", () => {
     setInputText("");
@@ -875,6 +943,62 @@
   setInputText("");
   setStatus('', 'Ready.');
 </script>
+<!-- AI Code Modal -->
+<div id="aiModal" style="
+  position:fixed;
+  inset:0;
+  background:rgba(0,0,0,.6);
+  display:none;
+  align-items:center;
+  justify-content:center;
+  z-index:9999;
+">
+  <div style="
+    background:#111827;
+    padding:25px;
+    border-radius:18px;
+    width:320px;
+    box-shadow:0 20px 60px rgba(0,0,0,.6);
+    border:1px solid rgba(255,255,255,.1);
+  ">
+    <h3 style="margin-top:0;">🔐 Enter Access Code</h3>
+    <input 
+      type="password" 
+      id="aiCodeInput"
+      placeholder="Enter AI code..."
+      style="
+        width:100%;
+        padding:10px;
+        border-radius:10px;
+        border:1px solid rgba(255,255,255,.2);
+        background:rgba(255,255,255,.05);
+        color:white;
+        margin-bottom:12px;
+      "
+    />
+    <div style="display:flex; gap:10px;">
+      <button id="aiCodeSubmit" style="
+        flex:1;
+        padding:10px;
+        border-radius:10px;
+        background:#7c5cff;
+        border:none;
+        color:white;
+        font-weight:600;
+        cursor:pointer;
+      ">Unlock</button>
+      <button id="aiCodeCancel" style="
+        flex:1;
+        padding:10px;
+        border-radius:10px;
+        background:#ef4444;
+        border:none;
+        color:white;
+        font-weight:600;
+        cursor:pointer;
+      ">Cancel</button>
+    </div>
+  </div>
+</div>
 </body>
 </html>
-
