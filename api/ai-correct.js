@@ -25,6 +25,9 @@ export default async function handler(req, res) {
 
     const { text, languageHint, code } = req.body || {};
 
+    console.log("Incoming code:", code);
+    console.log("Env ADMIN_CODE:", ADMIN_CODE);
+
     if (!code || code !== ADMIN_CODE) {
       return res.status(401).json({ error: "Invalid access code" });
     }
