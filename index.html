@@ -2,10 +2,8 @@
 <html lang="en">
 <head>
   <meta charset="UTF-8" />
-  <meta name="viewport" content="width=device-width, initial-scale=1"/>
+  <meta name="viewport" content="width=device-width,initial-scale=1"/>
   <title>Spell & Grammar Checker</title>
-  <link rel="icon" type="image/png" href="logo.png">
-
   <style>
     :root{
       --bg:#0b1020;
@@ -35,20 +33,13 @@
     .topbar{display:flex; gap:14px; align-items:center; justify-content:space-between; margin-bottom:18px;}
     .brand{display:flex; gap:12px; align-items:center;}
     .site-logo{
-      width:42px;height:42px;border-radius:14px;
+      width:42px;height:42px;border-radius:14px; overflow:hidden;
       box-shadow: var(--shadow);
-      object-fit: cover;
+      border:1px solid rgba(255,255,255,.10);
+      object-fit:cover;
       display:block;
     }
-    h1{font-size:18px;margin:0; display:flex; align-items:center; gap:8px;}
-    .badge{
-      font-size:12px;
-      background: rgba(124,92,255,.35);
-      border:1px solid rgba(124,92,255,.65);
-      padding:3px 8px;
-      border-radius:999px;
-      font-weight:700;
-    }
+    h1{font-size:18px;margin:0}
     .sub{color:var(--muted);font-size:13px;margin-top:2px}
 
     .card{
@@ -79,7 +70,7 @@
     }
     button{
       cursor:pointer;
-      transition: transform .08s ease, background .15s ease, opacity .15s ease;
+      transition: transform .08s ease, background .15s ease;
       user-select:none;
     }
     button:hover{ background: rgba(255,255,255,.10); }
@@ -115,10 +106,7 @@
       gap:10px;
       align-items:center;
     }
-    .dot{
-      width:9px;height:9px;border-radius:99px;
-      background: rgba(255,255,255,.25);
-    }
+    .dot{ width:9px;height:9px;border-radius:99px; background: rgba(255,255,255,.25); }
     .dot.ok{ background: var(--accent2); }
     .dot.bad{ background: var(--danger); }
     .dot.busy{ background: var(--warn); }
@@ -133,7 +121,6 @@
       font-size:13px;
       gap: 10px;
     }
-
     textarea{
       width:100%;
       height:320px;
@@ -150,14 +137,9 @@
     }
     textarea[readonly]{ opacity:.95; }
 
-    .hiWrap{
-      position:relative;
-      width:100%;
-      height:320px;
-    }
+    .hiWrap{ position:relative; width:100%; height:320px; }
     .hiOverlay, .hiEditor{
-      position:absolute;
-      inset:0;
+      position:absolute; inset:0;
       border-radius: 14px;
       border:1px solid var(--border);
       background: var(--area-bg);
@@ -168,10 +150,7 @@
       white-space: pre-wrap;
       word-wrap: break-word;
     }
-    .hiOverlay{
-      color:var(--text);
-      pointer-events:none;
-    }
+    .hiOverlay{ color:var(--text); pointer-events:none; }
     .hiOverlay mark{
       background: rgba(239,68,68,.22);
       outline: 1px solid rgba(239,68,68,.35);
@@ -253,27 +232,29 @@
     }
     .row{display:flex; gap:10px; flex-wrap:wrap}
 
-    /* Modal */
-    .modalBack{
-      position:fixed; inset:0;
-      background:rgba(0,0,0,.6);
+    /* AI modal */
+    #aiModal{
+      position:fixed;
+      inset:0;
+      background:rgba(0,0,0,.60);
       display:none;
       align-items:center;
       justify-content:center;
       z-index:9999;
+      padding: 16px;
     }
-    .modal{
+    .aiBox{
       background:#111827;
-      padding:18px;
+      padding:22px;
       border-radius:18px;
-      width:340px;
+      width:min(360px, 100%);
       box-shadow:0 20px 60px rgba(0,0,0,.6);
-      border:1px solid rgba(255,255,255,.1);
+      border:1px solid rgba(255,255,255,.10);
     }
-    .modal h3{ margin:0 0 10px 0; }
-    .modal input{
+    .aiBox h3{margin:0 0 10px 0}
+    .aiBox input{
       width:100%;
-      padding:10px;
+      padding:10px 12px;
       border-radius:10px;
       border:1px solid rgba(255,255,255,.2);
       background:rgba(255,255,255,.05);
@@ -281,10 +262,18 @@
       margin-bottom:12px;
       outline:none;
     }
-    .modalBtns{display:flex; gap:10px;}
-    .modalBtns button{flex:1; font-weight:700;}
-    .btnUnlock{ background: rgba(124,92,255,.35); border-color: rgba(124,92,255,.65); }
-    .btnCancel{ background: rgba(239,68,68,.18); border-color: rgba(239,68,68,.45); }
+    .aiRow{display:flex; gap:10px;}
+    .aiRow button{
+      flex:1;
+      padding:10px;
+      border-radius:10px;
+      border:none;
+      color:white;
+      font-weight:700;
+      cursor:pointer;
+    }
+    .aiUnlock{ background:#7c5cff; }
+    .aiCancel{ background:#ef4444; }
 
     @media (max-width: 900px){
       .grid{ grid-template-columns: 1fr; }
@@ -296,14 +285,14 @@
     }
   </style>
 </head>
-
 <body>
   <div class="wrap">
     <div class="topbar">
       <div class="brand">
-        <img src="logo.png" class="site-logo" alt="Spell & Grammar Checker">
+        <!-- Put your logo.png in repo root -->
+        <img class="site-logo" src="logo.png" alt="Logo">
         <div>
-          <h1>Spell &amp; Grammar Checker <span class="badge">AI</span></h1>
+          <h1>Spell & Grammar Checker</h1>
           <div class="sub">Auto-check • Highlights • Export PDF/DOCX • AI Fix (protected)</div>
         </div>
       </div>
@@ -333,7 +322,7 @@
 
         <button class="good" id="applyAllBtn" title="Apply best suggestion for each issue">Apply all</button>
 
-        <button class="ai" id="aiFixBtn" title="AI proofread using secure backend">✨ AI Fix</button>
+        <button class="ai" id="aiFixBtn" title="AI proofread (requires secret code)">✨ AI Fix</button>
 
         <button id="swapBtn" class="neutral" title="Move corrected text back to input">Use corrected as input</button>
         <button id="clearBtn" class="danger">Clear</button>
@@ -381,7 +370,7 @@
             <br/><br/>
             <b>AI Fix</b> uses secure backend: <code>/api/ai-correct</code>
             <br/><br/>
-            🔐 AI Fix requires your secret code.
+            🔒 AI Fix requires your secret code.
           </div>
           <div class="small" id="info"></div>
           <div class="small" id="autoInfo">Auto-check: ON</div>
@@ -390,16 +379,18 @@
     </div>
   </div>
 
-  <!-- Modal HTML (MUST exist, otherwise aiModal is null) -->
-  <div class="modalBack" id="aiModal" aria-hidden="true">
-    <div class="modal" role="dialog" aria-modal="true" aria-labelledby="aiModalTitle">
-      <h3 id="aiModalTitle">🔐 Enter Access Code</h3>
-      <input type="password" id="aiCodeInput" placeholder="Access code..." autocomplete="off">
-      <div class="modalBtns">
-        <button class="btnUnlock" id="aiCodeSubmit">Unlock</button>
-        <button class="btnCancel" id="aiCodeCancel">Cancel</button>
+  <!-- AI Code Modal -->
+  <div id="aiModal" aria-hidden="true">
+    <div class="aiBox">
+      <h3>🔐 Enter Access Code</h3>
+      <input type="password" id="aiCodeInput" placeholder="Enter AI code..." />
+      <div class="aiRow">
+        <button class="aiUnlock" id="aiCodeSubmit">Unlock</button>
+        <button class="aiCancel" id="aiCodeCancel">Cancel</button>
       </div>
-      <div class="small" style="margin-top:10px;">Tip: only you should know this code.</div>
+      <div class="small" style="margin-top:10px;color:rgba(255,255,255,.65);">
+        Tip: this code is only for you.
+      </div>
     </div>
   </div>
 
@@ -408,8 +399,7 @@
   <script src="https://cdn.jsdelivr.net/npm/docx@8.5.0/build/index.umd.js"></script>
   <script src="https://cdn.jsdelivr.net/npm/file-saver@2.0.5/dist/FileSaver.min.js"></script>
 
-  <script>
-  // ---------- Elements ----------
+<script>
   const overlayEl = document.getElementById('overlay');
   const editorEl = document.getElementById('editor');
   const correctedEl = document.getElementById('corrected');
@@ -434,17 +424,18 @@
   const infoEl = document.getElementById('info');
 
   // Modal
-  const aiModal = document.getElementById("aiModal");
-  const aiCodeInput = document.getElementById("aiCodeInput");
-  const aiCodeSubmit = document.getElementById("aiCodeSubmit");
-  const aiCodeCancel = document.getElementById("aiCodeCancel");
+  const aiModal = document.getElementById('aiModal');
+  const aiCodeInput = document.getElementById('aiCodeInput');
+  const aiCodeSubmit = document.getElementById('aiCodeSubmit');
+  const aiCodeCancel = document.getElementById('aiCodeCancel');
 
-  // ---------- Config ----------
+  // ✅ Use Vercel serverless route
   const AI_BACKEND_URL = "/api/ai-correct";
 
   let lastMatches = [];
   let autoTimer = null;
   let isChecking = false;
+  let cachedAiCode = ""; // stored only in memory
 
   function setStatus(type, text){
     statusText.textContent = text;
@@ -452,12 +443,13 @@
   }
 
   function escapeHtml(s){
-    return (s || "").replace(/[&<>"']/g, m => ({
+    return String(s).replace(/[&<>"']/g, m => ({
       '&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#039;'
     }[m]));
   }
 
   function getInputText(){
+    // innerText keeps line breaks
     return editorEl.innerText.replace(/\u00A0/g, '');
   }
 
@@ -469,7 +461,7 @@
   function renderOverlayPlain(){
     const t = getInputText();
     overlayEl.textContent = t;
-    correctedEl.value = t;
+    if (!correctedEl.value) correctedEl.value = t;
   }
 
   function syncScroll(){
@@ -494,7 +486,9 @@
     scheduleAutoCheck();
   });
 
-  // ---------- SMART suggestion ----------
+  // -----------------------------
+  // SMART SUGGESTION ENGINE
+  // -----------------------------
   function normalizeLetters(s){
     return (s || "")
       .toLowerCase()
@@ -507,8 +501,10 @@
     const n = a.length, m = b.length;
     if (n === 0) return m;
     if (m === 0) return n;
+
     const dp = new Array(m + 1);
     for (let j = 0; j <= m; j++) dp[j] = j;
+
     for (let i = 1; i <= n; i++){
       let prev = dp[0];
       dp[0] = i;
@@ -528,13 +524,16 @@
 
   function scoreSuggestion(wrong, suggestion){
     if (!suggestion) return Number.POSITIVE_INFINITY;
+
     const w = (wrong ?? "").trim();
     const s = (suggestion ?? "").trim();
+
     if (!w || !s) return Number.POSITIVE_INFINITY;
     if (isWeirdSuggestion(s)) return 1e9;
 
     const distRaw = levenshtein(w.toLowerCase(), s.toLowerCase());
     const distFold = levenshtein(normalizeLetters(w), normalizeLetters(s));
+
     let score = distRaw * 1.0 + distFold * 0.7;
 
     const wFirst = w[0]?.toLowerCase() ?? "";
@@ -542,15 +541,19 @@
     if (wFirst && sFirst && wFirst !== sFirst) score += 2.25;
 
     score += Math.abs(w.length - s.length) * 0.35;
+
     if (normalizeLetters(w) === normalizeLetters(s)) score -= 0.9;
     if (w.length <= 3 && wFirst && sFirst && wFirst !== sFirst) score += 1.2;
+
     return score;
   }
 
   function chooseBestSuggestion(wrong, replacements){
     if (!replacements || replacements.length === 0) return null;
+
     let best = null;
     let bestScore = Number.POSITIVE_INFINITY;
+
     for (const r of replacements){
       const cand = r?.value;
       const sc = scoreSuggestion(wrong, cand);
@@ -562,7 +565,9 @@
     return best || replacements[0]?.value || null;
   }
 
-  // ---------- LanguageTool ----------
+  // -----------------------------
+  // LanguageTool check
+  // -----------------------------
   async function checkText(force){
     if(isChecking) return;
 
@@ -572,7 +577,8 @@
       issuesEl.innerHTML = `<div class="small">Paste or type some text first.</div>`;
       infoEl.textContent = "";
       setStatus('', 'Ready.');
-      renderOverlayPlain();
+      overlayEl.textContent = "";
+      correctedEl.value = "";
       applyAllBtn.disabled = true;
       return;
     }
@@ -675,7 +681,9 @@
             Best fix: <b>${escapeHtml(bestFix || "(no suggestion)")}</b>
           </div>
         </div>
-        <div><span class="pill">${bestFix ? "Click to apply" : "No fix"}</span></div>
+        <div>
+          <span class="pill">${bestFix ? "Click to apply" : "No fix"}</span>
+        </div>
       `;
       issuesEl.appendChild(el);
     });
@@ -720,7 +728,9 @@
     overlayEl.innerHTML = out.replace(/\n/g, "<br>");
   }
 
-  // ---------- Apply fixes ----------
+  // -----------------------------
+  // APPLY FIXES
+  // -----------------------------
   function applySingle(idx){
     const m = lastMatches[idx];
     if(!m || !m.replacements || m.replacements.length === 0) return;
@@ -746,11 +756,13 @@
 
     for(const m of matchesSorted){
       if(!m.replacements || m.replacements.length === 0) continue;
+
       const start = m.offset;
       const end = m.offset + m.length;
       const wrong = t.slice(start, end);
       const best = chooseBestSuggestion(wrong, m.replacements);
       if(!best) continue;
+
       t = t.slice(0, start) + best + t.slice(end);
     }
 
@@ -758,20 +770,26 @@
     await checkText(true);
   }
 
-  // ---------- AI Fix (Protected) ----------
-  function openModal(){
+  // -----------------------------
+  // AI FIX (protected)
+  // -----------------------------
+  function openAiModal(){
+    aiCodeInput.value = cachedAiCode || "";
     aiModal.style.display = "flex";
-    aiCodeInput.value = localStorage.getItem("sgc_access_code") || "";
-    aiCodeInput.focus();
+    aiModal.setAttribute("aria-hidden", "false");
+    setTimeout(()=>aiCodeInput.focus(), 0);
   }
-  function closeModal(){
+
+  function closeAiModal(){
     aiModal.style.display = "none";
+    aiModal.setAttribute("aria-hidden", "true");
+    aiCodeInput.value = "";
   }
 
   async function aiFixWithCode(code){
     const text = getInputText().trim();
     if(!text){
-      setStatus('bad','Write some text first.');
+      alert("Write some text first.");
       return;
     }
 
@@ -787,39 +805,46 @@
         body: JSON.stringify({ text, languageHint, code })
       });
 
-      const data = await res.json().catch(()=> ({}));
+      const bodyText = await res.text().catch(()=> "");
+      let data = {};
+      try { data = JSON.parse(bodyText); } catch { data = { raw: bodyText }; }
+
       if(!res.ok){
-        throw new Error(data.error || `AI error (${res.status})`);
+        const msg =
+          (data && data.error) ? `${data.error}${data.details ? " (see logs)" : ""}` :
+          `AI backend error: ${res.status}`;
+        throw new Error(msg);
       }
 
       correctedEl.value = data.correctedText || "";
-      setStatus('ok', 'AI fix done.');
+      setStatus('ok', 'AI fix done. (See left box)');
+
     } catch(e){
       console.error(e);
-      setStatus('bad', 'Invalid code or AI error.');
-      // friendly message
-      alert("AI Fix failed. Check your code and make sure OpenAI key is set in Vercel.");
+      setStatus('bad', 'AI error.');
+      alert("AI Fix failed: " + String(e.message || e));
     } finally {
       aiFixBtn.disabled = false;
     }
   }
 
-  // ---------- Copy / Export ----------
+  // Copy / Export
   async function copyText(text){
+    const t = text || "";
     try{
-      await navigator.clipboard.writeText(text || "");
+      await navigator.clipboard.writeText(t);
       setStatus('ok', 'Copied!');
-      setTimeout(()=> setStatus('', 'Ready.'), 900);
-    }catch{
+      setTimeout(()=>setStatus('', 'Ready.'), 900);
+    } catch {
       // fallback
       const ta = document.createElement("textarea");
-      ta.value = text || "";
+      ta.value = t;
       document.body.appendChild(ta);
       ta.select();
-      document.execCommand("copy");
-      ta.remove();
+      try { document.execCommand("copy"); } catch {}
+      document.body.removeChild(ta);
       setStatus('ok', 'Copied!');
-      setTimeout(()=> setStatus('', 'Ready.'), 900);
+      setTimeout(()=>setStatus('', 'Ready.'), 900);
     }
   }
 
@@ -856,13 +881,20 @@
     if(!t){ alert("Nothing to export."); return; }
 
     const { Document, Packer, Paragraph, TextRun } = window.docx;
-    const paragraphs = t.split(/\n/).map(line => new Paragraph({ children: [ new TextRun(line) ] }));
-    const doc = new Document({ sections: [{ properties: {}, children: paragraphs }] });
+
+    const paragraphs = t.split(/\n/).map(line =>
+      new Paragraph({ children: [ new TextRun(line) ] })
+    );
+
+    const doc = new Document({
+      sections: [{ properties: {}, children: paragraphs }]
+    });
+
     const blob = await Packer.toBlob(doc);
     saveAs(blob, "corrected-text.docx");
   });
 
-  // ---------- Event listeners ----------
+  // Events
   issuesEl.addEventListener("click", (e) => {
     const row = e.target.closest(".issue");
     if(!row) return;
@@ -873,42 +905,40 @@
   checkBtn.addEventListener("click", () => checkText(true));
   applyAllBtn.addEventListener("click", applyAll);
 
-  // AI button opens modal
-  aiFixBtn.addEventListener("click", openModal);
+  aiFixBtn.addEventListener("click", () => {
+    // Always ask for code unless we already have it
+    openAiModal();
+  });
 
-  // Modal buttons
-  aiCodeCancel.addEventListener("click", closeModal);
+  aiCodeCancel.addEventListener("click", closeAiModal);
   aiModal.addEventListener("click", (e) => {
-    if(e.target === aiModal) closeModal();
-  });
-  aiCodeSubmit.addEventListener("click", () => {
-    const code = (aiCodeInput.value || "").trim();
-    if(!code) return alert("Enter access code.");
-    localStorage.setItem("sgc_access_code", code);
-    closeModal();
-    aiFixWithCode(code);
-  });
-  aiCodeInput.addEventListener("keydown", (e) => {
-    if(e.key === "Enter"){
-      aiCodeSubmit.click();
-    }
-    if(e.key === "Escape"){
-      closeModal();
-    }
+    if (e.target === aiModal) closeAiModal();
   });
 
-  // Clear (FIXED)
+  aiCodeSubmit.addEventListener("click", async () => {
+    const code = (aiCodeInput.value || "").trim();
+    if(!code){ alert("Enter your access code."); return; }
+    cachedAiCode = code;
+    closeAiModal();
+    await aiFixWithCode(code);
+  });
+
+  aiCodeInput.addEventListener("keydown", (e) => {
+    if (e.key === "Enter") aiCodeSubmit.click();
+    if (e.key === "Escape") closeAiModal();
+  });
+
   clearBtn.addEventListener("click", () => {
     setInputText("");
     correctedEl.value = "";
     lastMatches = [];
+    overlayEl.textContent = "";
     issuesEl.innerHTML = `<div class="small">Issues will appear here. Click an issue to apply the best fix (smart selection).</div>`;
     infoEl.textContent = "";
     applyAllBtn.disabled = true;
     setStatus('', 'Ready.');
   });
 
-  // Swap
   swapBtn.addEventListener("click", () => {
     const t = correctedEl.value || "";
     if(!t.trim()) return;
@@ -916,14 +946,14 @@
     checkText(true);
   });
 
-  // Copy buttons (FIXED)
   copyInputBtn.addEventListener("click", () => copyText(getInputText()));
   copyCorrectedBtn.addEventListener("click", () => copyText(correctedEl.value));
 
   // Init
   applyAllBtn.disabled = true;
   setInputText("");
+  correctedEl.value = "";
   setStatus('', 'Ready.');
-  </script>
+</script>
 </body>
 </html>
