@@ -1,20 +1,30 @@
 export default async function handler(req, res) {
-  try {
-    if (req.method !== "POST") {
-      return res.status(405).json({ error: "Method not allowed" });
-    }
+  // CORS (valfritt men bra)
+  res.setHeader("Access-Control-Allow-Origin", "*");
+  res.setHeader("Access-Control-Allow-Methods", "POST,OPTIONS");
+  res.setHeader("Access-Control-Allow-Headers", "Content-Type");
 
-    // Read env vars (set in Vercel)
+  if (req.method === "OPTIONS") return res.status(200).end();
+  if (req.method !== "POST") return res.status(405).json({ error: "Method not allowed" });
+
+  try {
     const OPENAI_API_KEY = process.env.OPENAI_API_KEY;
-    const ADMIN_CODE = process.env.ADMIN_CODE; // your secret code
+    const ADMIN_CODE = process.env.ADMIN_CODE;
+
+    // Byt modell här om du vill (gpt-4o-mini brukar funka)
     const MODEL = process.env.OPENAI_MODEL || "gpt-4o-mini";
 
-    if (!OPENAI_API_KEY) return res.status(500).json({ error: "Missing OPENAI_API_KEY" });
-    if (!ADMIN_CODE) return res.status(500).json({ error: "Missing ADMIN_CODE" });
+    if (!OPENAI_API_KEY) {
+      console.error("Missing OPENAI_API_KEY in env");
+      return res.status(500).json({ error: "Missing OPENAI_API_KEY in Vercel env" });
+    }
+    if (!ADMIN_CODE) {
+      console.error("Missing ADMIN_CODE in env");
+      return res.status(500).json({ error: "Missing ADMIN_CODE in Vercel env" });
+    }
 
     const { text, languageHint, code } = req.body || {};
 
-    // Check secret code
     if (!code || code !== ADMIN_CODE) {
       return res.status(401).json({ error: "Invalid access code" });
     }
@@ -23,70 +33,65 @@ export default async function handler(req, res) {
       return res.status(400).json({ error: "Missing text" });
     }
 
-    // Keep cost under control (optional safety)
     if (text.length > 12000) {
       return res.status(400).json({ error: "Text too long (max 12,000 characters)" });
     }
 
-    const system = `
-You are a professional proofreader.
-Correct spelling, grammar, punctuation, and word choices.
-Keep the original meaning. Preserve line breaks and bullet points.
-Do not add new information.
-Return ONLY JSON like:
-{"correctedText":"..."}
-`.trim();
+    const system =
+      "You are a professional proofreader. Correct spelling, grammar, punctuation, and word choices. " +
+      "Keep the original meaning. Preserve line breaks and bullet points. Do not add new information. " +
+      'Return ONLY a JSON object like: {"correctedText":"..."}';
 
-    const user = `LANGUAGE_HINT: ${languageHint || "auto"}\nTEXT:\n${text}`;
+    const payload = {
+      model: MODEL,
+      input: [
+        { role: "system", content: system },
+        { role: "user", content: `Language hint: ${languageHint || "auto"}\n\nTEXT:\n${text}` }
+      ],
+      temperature: 0.2
+    };
 
-    // OpenAI Responses API
     const r = await fetch("https://api.openai.com/v1/responses", {
       method: "POST",
       headers: {
-        "Authorization": `Bearer ${OPENAI_API_KEY}`,
+        Authorization: `Bearer ${OPENAI_API_KEY}`,
         "Content-Type": "application/json"
       },
-      body: JSON.stringify({
-        model: MODEL,
-        input: [
-          { role: "system", content: system },
-          { role: "user", content: user }
-        ],
-        temperature: 0.2
-      })
+      body: JSON.stringify(payload)
     });
 
-    if (!r.ok) {
-      const errText = await r.text().catch(() => "");
-      return res.status(500).json({ error: `OpenAI error ${r.status}: ${errText}` });
-    }
+    const raw = await r.text();
 
-    const data = await r.json();
-
-    // Try to get text out in a tolerant way:
-    const outputText =
-      data.output_text ||
-      (Array.isArray(data.output)
-        ? data.output.flatMap(o => o.content || []).map(c => c.text).filter(Boolean).join("\n")
-        : "");
-
-    let parsed;
+    // Försök tolka JSON, annars behåll råtext
+    let data;
     try {
-      parsed = JSON.parse(outputText);
+      data = JSON.parse(raw);
     } catch {
-      // fallback: try to find JSON block
-      const m = outputText.match(/\{[\s\S]*\}/);
-      if (!m) return res.status(500).json({ error: "Model did not return JSON", raw: outputText });
-      parsed = JSON.parse(m[0]);
+      data = { raw };
     }
 
-    if (!parsed.correctedText) {
-      return res.status(500).json({ error: "Missing correctedText", raw: parsed });
+    if (!r.ok) {
+      // ✅ Här får du EXAKT varför (quota/invalid key/model etc)
+      console.error("OpenAI error:", r.status, data);
+      return res.status(r.status).json({
+        error: "OpenAI request failed",
+        status: r.status,
+        details: data
+      });
     }
 
-    return res.status(200).json({ correctedText: parsed.correctedText });
+    const out =
+      data?.output_text ||
+      data?.output?.[0]?.content?.[0]?.text ||
+      "";
+
+    return res.status(200).json({ correctedText: out });
 
   } catch (e) {
-    return res.status(500).json({ error: String(e) });
+    console.error("Server crash:", e);
+    return res.status(500).json({
+      error: "Server crash",
+      message: String(e?.message || e)
+    });
   }
 }
